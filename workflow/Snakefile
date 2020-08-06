@@ -1,0 +1,38 @@
+from snakemake.utils import min_version
+min_version("5.12.0")
+
+configfile: "config/config.yaml"
+report: "report/workflow.rst"
+
+# Allow users to fix the underlying OS via singularity.
+container: "docker://continuumio/miniconda3"
+
+include: "rules/common.smk"
+include: "rules/ref.smk"
+include: "rules/trimming.smk"
+include: "rules/mapping.smk"
+include: "rules/candidate_calling.smk"
+include: "rules/calling.smk"
+include: "rules/annotation.smk"
+include: "rules/filtering.smk"
+include: "rules/report.smk"
+include: "rules/tmb.smk"
+include: "rules/vega.smk"
+include: "rules/utils.smk"
+include: "rules/oncoprint.smk"
+include: "rules/primers.smk"
+
+groups = samples["group"].unique()
+
+batches = "all"
+if is_activated("oncoprint/stratify"):
+    batches = samples[config["oncoprint"]["stratify"]["by-column"]].unique()
+
+
+rule all:
+    input:
+        get_final_output(),
+        get_tmb_targets(),
+        expand("results/plots/oncoprint/{batch}.{event}.html",
+               event=config["calling"]["fdr-control"]["events"],
+               batch=batches)
